@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Slotify Live</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <style>
+        body { font-family: sans-serif; padding: 24px; max-width: 600px; }
+        h2 { margin-bottom: 8px; }
+        #status { padding: 8px 12px; border-radius: 6px; display: inline-block; margin-bottom: 16px; }
+        .connected { background: #EAF3DE; color: #27500A; }
+        .disconnected { background: #FCEBEB; color: #501313; }
+        #events { border: 1px solid #ddd; border-radius: 8px; padding: 12px; min-height: 200px; }
+        .event { padding: 8px; border-bottom: 1px solid #f0f0f0; font-size: 14px; }
+        .SEAT_RESERVED { color: #0C447C; }
+        .SEAT_AVAILABLE { color: #27500A; }
+        .WAITLIST_UPDATE { color: #633806; }
+        input { padding: 8px; border: 1px solid #ddd; border-radius: 6px; margin-right: 8px; }
+        button { padding: 8px 16px; border-radius: 6px; border: none;
+            background: #178CF2; color: white; cursor: pointer; }
+    </style>
+</head>
+<body>
+<h2>Slotify Live Updates</h2>
+<div id="status" class="disconnected">Disconnected</div>
+<br/>
+<input type="number" id="eventId" placeholder="Event ID" value="1"/>
+<button onclick="subscribe()">Subscribe</button>
+<br/><br/>
+<div id="events"><p style="color:#aaa">Waiting for events...</p></div>
+
+<script>
+    var stompClient = null;
+
+    var socket = new SockJS('http://localhost:8080/ws');
+    stompClient = Stomp.over(socket);
+    stompClient.debug = null;
+
+    stompClient.connect({}, function() {
+        document.getElementById('status').textContent = 'Connected';
+        document.getElementById('status').className = 'connected';
+    });
+
+    function subscribe() {
+        var eventId = document.getElementById('eventId').value;
+
+        stompClient.subscribe('/topic/events/' + eventId + '/seats', function(msg) {
+            addEvent(JSON.parse(msg.body));
+        });
+
+        stompClient.subscribe('/topic/events/' + eventId + '/waitlist', function(msg) {
+            addEvent(JSON.parse(msg.body));
+        });
+
+        document.getElementById('events').innerHTML = '';
+        addLog('Subscribed to event ' + eventId);
+    }
+
+    function addEvent(data) {
+        var div = document.createElement('div');
+        div.className = 'event ' + data.type;
+        div.textContent = new Date().toLocaleTimeString() + ' — ' + JSON.stringify(data);
+        document.getElementById('events').prepend(div);
+    }
+
+    function addLog(msg) {
+        var div = document.createElement('div');
+        div.className = 'event';
+        div.style.color = '#888';
+        div.textContent = msg;
+        document.getElementById('events').prepend(div);
+    }
+</script>
+</body>
+</html>

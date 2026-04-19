@@ -28,7 +28,7 @@ public class WaitlistService {
     private final UserRepository userRepository;
     private final SlotifyEventProducer eventProducer;
     private final RedisTemplate<String, Object> redisTemplate;
-
+    private final WebSocketEventPublisher webSocketEventPublisher;
     private static final String WAITLIST_KEY = "waitlist:event:";
 
     @Transactional
@@ -70,6 +70,8 @@ public class WaitlistService {
                 .position(position)
                 .joinedAt(LocalDateTime.now())
                 .build());
+        webSocketEventPublisher.publishWaitlistUpdate(eventId,
+                waitlistRepository.countByEventId(eventId));
     }
 
     @Transactional

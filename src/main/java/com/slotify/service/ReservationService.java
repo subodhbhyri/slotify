@@ -31,6 +31,7 @@ public class ReservationService {
     private final UserRepository userRepository;
     private final SlotifyEventProducer eventProducer;
     private final WaitlistService waitlistService;
+    private final WebSocketEventPublisher webSocketEventPublisher;
     @Transactional
     public SeatResponse reserveSeat(ReserveSeatRequest request) {
         Event event = eventRepository.findById(request.getEventId())
@@ -63,6 +64,7 @@ public class ReservationService {
                 .eventName(event.getName())
                 .reservedAt(saved.getReservedAt())
                 .build());
+        webSocketEventPublisher.publishSeatReserved(event.getId(), mapToResponse(saved));
         return mapToResponse(saved);
     }
 
@@ -100,7 +102,7 @@ public class ReservationService {
                     .eventName(event.getName())
                     .reservedAt(saved.getReservedAt())
                     .build());
-
+            webSocketEventPublisher.publishSeatReserved(event.getId(), mapToResponse(saved));
             return mapToResponse(saved);
         }
 
@@ -121,7 +123,7 @@ public class ReservationService {
                 .eventName(event.getName())
                 .cancelledAt(LocalDateTime.now())
                 .build());
-
+        webSocketEventPublisher.publishSeatAvailable(event.getId(), mapToResponse(saved));
         log.info("User {} cancelled seat {} for event {}", userId, seat.getSeatNumber(), event.getName());
         return mapToResponse(saved);
     }
