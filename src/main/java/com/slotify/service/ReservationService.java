@@ -32,40 +32,50 @@ public class ReservationService {
     private final SlotifyEventProducer eventProducer;
     private final WaitlistService waitlistService;
     private final WebSocketEventPublisher webSocketEventPublisher;
+    private final DistributedLockService lockService;
     @Transactional
     public SeatResponse reserveSeat(ReserveSeatRequest request) {
-        Event event = eventRepository.findById(request.getEventId())
-                .orElseThrow(() -> new SlotifyException("Event not found with id: " + request.getEventId()));
+        return lockService.executeWithLock(
+                String.valueOf(request.getEventId()), () -> {
 
-        User user = userRepository.findById(request.getUserId())
-                .orElseThrow(() -> new SlotifyException("User not found with id: " + request.getUserId()));
+                    Event event = eventRepository.findById(request.getEventId())
+                            .orElseThrow(() -> new SlotifyException("Event not found with id: "
+                                    + request.getEventId()));
 
-        Seat seat = seatRepository
-                .findByEventIdAndStatus(event.getId(), SeatStatus.AVAILABLE)
-                .stream()
-                .findFirst()
-                .orElseThrow(() -> new SlotifyException("No available seats for event: " + event.getName()));
+                    User user = userRepository.findById(request.getUserId())
+                            .orElseThrow(() -> new SlotifyException("User not found with id: "
+                                    + request.getUserId()));
 
-        seat.setStatus(SeatStatus.RESERVED);
-        seat.setUser(user);
-        seat.setReservedAt(LocalDateTime.now());
+                    Seat seat = seatRepository
+                            .findByEventIdAndStatus(event.getId(), SeatStatus.AVAILABLE)
+                            .stream()
+                            .findFirst()
+                            .orElseThrow(() -> new SlotifyException("No available seats for event: "
+                                    + event.getName()));
 
-        event.setAvailableSeats(event.getAvailableSeats() - 1);
+                    seat.setStatus(SeatStatus.RESERVED);
+                    seat.setUser(user);
+                    seat.setReservedAt(LocalDateTime.now());
+                    event.setAvailableSeats(event.getAvailableSeats() - 1);
 
-        eventRepository.save(event);
-        Seat saved = seatRepository.save(seat);
+                    eventRepository.save(event);
+                    Seat saved = seatRepository.save(seat);
 
-        log.info("User {} reserved seat {} for event {}", user.getId(), seat.getSeatNumber(), event.getName());
-        eventProducer.publishSeatReserved(SeatReservedEvent.builder()
-                .seatId(saved.getId())
-                .eventId(event.getId())
-                .userId(user.getId())
-                .seatNumber(saved.getSeatNumber())
-                .eventName(event.getName())
-                .reservedAt(saved.getReservedAt())
-                .build());
-        webSocketEventPublisher.publishSeatReserved(event.getId(), mapToResponse(saved));
-        return mapToResponse(saved);
+                    log.info("User {} reserved seat {} for event {}",
+                            user.getId(), seat.getSeatNumber(), event.getName());
+
+                    eventProducer.publishSeatReserved(SeatReservedEvent.builder()
+                            .seatId(saved.getId())
+                            .eventId(event.getId())
+                            .userId(user.getId())
+                            .seatNumber(saved.getSeatNumber())
+                            .eventName(event.getName())
+                            .reservedAt(saved.getReservedAt())
+                            .build());
+
+                    webSocketEventPublisher.publishSeatReserved(event.getId(), mapToResponse(saved));
+                    return mapToResponse(saved);
+                });
     }
 
     @Transactional
