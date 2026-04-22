@@ -68,12 +68,6 @@ services:
     depends_on:
       - prometheus
 
-  anthropic:
-    api:
-      key: REMOVEDant-api03-pLVDS5ZffpMx1dnUg7vjFuourtJUvUvcujDMCIj9J4haXgexiG-Q7DNe9n1DfaZuFaU-uu5kA1EgZ0Z3bgqxCw-72iy0gAA
-      model: claude-opus-4-20250514
-      max-tokens: 1024
-
 volumes:
   postgres_data:
   redis_data:
