@@ -54,6 +54,6 @@ management:
 
 anthropic:
   api:
-    key: REMOVEDant-api03-fa0tooD4R44lWgALv8w-O0k9IgfmCjzjGqE-zj8dQqfhWzripYlCd-Lk2TueQde6eV7A9Kbqvw8X7fxOEHN-Rg-BXAx_gAA
+    key: ${ANTHROPIC_API_KEY}
     model: claude-sonnet-4-6
     max-tokens: 1024
